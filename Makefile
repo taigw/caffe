@@ -45,14 +45,21 @@ COMMON_FLAGS += -DCAFFE_VERSION=$(DYNAMIC_VERSION_MAJOR).$(DYNAMIC_VERSION_MINOR
 # Get all source files
 ##############################
 # CXX_SRCS are the source files excluding the test ones.
-CXX_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cpp" -name "*.cpp")
+CXX_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cpp"  -name "*.cpp" ! -name "crftest_*.cpp")
 # CU_SRCS are the cuda source files
-CU_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cu" -name "*.cu")
+CU_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cu"  -name "*.cu" ! -name "crftest_*.cu")
 # TEST_SRCS are the test source files
 TEST_MAIN_SRC := src/$(PROJECT)/test/test_caffe_main.cpp
 TEST_SRCS := $(shell find src/$(PROJECT) -name "test_*.cpp")
 TEST_SRCS := $(filter-out $(TEST_MAIN_SRC), $(TEST_SRCS))
 TEST_CU_SRCS := $(shell find src/$(PROJECT) -name "test_*.cu")
+
+CRFTEST_MAIN_SRC := src/$(PROJECT)/test_crf/crftest_caffe_main.cpp
+CRFTEST_SRCS := $(shell find src/$(PROJECT) -name "crftest_*.cpp")
+CRFTEST_SRCS := $(filter-out $(CRFTEST_MAIN_SRC), $(CRFTEST_SRCS))
+CRFTEST_SRCS := $(filter-out $(TEST_MAIN_SRC), $(CRFTEST_SRCS))
+CRFTEST_CU_SRCS := $(shell find src/$(PROJECT) -name "crftest_*.cu")
+
 GTEST_SRC := src/gtest/gtest-all.cpp
 # TOOL_SRCS are the source files for the tool binaries
 TOOL_SRCS := $(shell find tools -name "*.cpp")
@@ -122,11 +129,18 @@ TEST_CU_BUILD_DIR := $(BUILD_DIR)/cuda/src/$(PROJECT)/test
 TEST_CXX_OBJS := $(addprefix $(BUILD_DIR)/, ${TEST_SRCS:.cpp=.o})
 TEST_CU_OBJS := $(addprefix $(BUILD_DIR)/cuda/, ${TEST_CU_SRCS:.cu=.o})
 TEST_OBJS := $(TEST_CXX_OBJS) $(TEST_CU_OBJS)
+
+CRFTEST_CXX_BUILD_DIR := $(BUILD_DIR)/src/$(PROJECT)/test_crf
+CRFTEST_CU_BUILD_DIR := $(BUILD_DIR)/cuda/src/$(PROJECT)/test_crf
+CRFTEST_CXX_OBJS := $(addprefix $(BUILD_DIR)/, ${CRFTEST_SRCS:.cpp=.o})
+CRFTEST_CU_OBJS := $(addprefix $(BUILD_DIR)/cuda/, ${CRFTEST_CU_SRCS:.cu=.o})
+CRFTEST_OBJS := $(CRFTEST_CXX_OBJS) $(CRFTEST_CU_OBJS)
+
 GTEST_OBJ := $(addprefix $(BUILD_DIR)/, ${GTEST_SRC:.cpp=.o})
 EXAMPLE_OBJS := $(addprefix $(BUILD_DIR)/, ${EXAMPLE_SRCS:.cpp=.o})
 # Output files for automatic dependency generation
-DEPS := ${CXX_OBJS:.o=.d} ${CU_OBJS:.o=.d} ${TEST_CXX_OBJS:.o=.d} \
-	${TEST_CU_OBJS:.o=.d} $(BUILD_DIR)/${MAT$(PROJECT)_SO:.$(MAT_SO_EXT)=.d}
+DEPS := ${CXX_OBJS:.o=.d} ${CU_OBJS:.o=.d} ${TEST_CXX_OBJS:.o=.d} ${CRFTEST_CXX_OBJS:.o=.d} \
+	${TEST_CU_OBJS:.o=.d} ${CRFTEST_CU_OBJS:.o=.d} $(BUILD_DIR)/${MAT$(PROJECT)_SO:.$(MAT_SO_EXT)=.d}
 # tool, example, and test bins
 TOOL_BINS := ${TOOL_OBJS:.o=.bin}
 EXAMPLE_BINS := ${EXAMPLE_OBJS:.o=.bin}
@@ -142,6 +156,15 @@ TEST_BINS := $(TEST_CXX_BINS) $(TEST_CU_BINS)
 # TEST_ALL_BIN is the test binary that links caffe dynamically.
 TEST_ALL_BIN := $(TEST_BIN_DIR)/test_all.testbin
 
+CRFTEST_BIN_DIR := $(BUILD_DIR)/test_crf
+CRFTEST_CU_BINS := $(addsuffix .testbin,$(addprefix $(CRFTEST_BIN_DIR)/, \
+		$(foreach obj,$(CRFTEST_CU_OBJS),$(basename $(notdir $(obj))))))
+CRFTEST_CXX_BINS := $(addsuffix .testbin,$(addprefix $(CRFTEST_BIN_DIR)/, \
+		$(foreach obj,$(CRFTEST_CXX_OBJS),$(basename $(notdir $(obj))))))
+CRFTEST_BINS := $(CRFTEST_CXX_BINS) $(CRFTEST_CU_BINS)
+# TEST_ALL_BIN is the test binary that links caffe dynamically.
+CRFTEST_ALL_BIN := $(CRFTEST_BIN_DIR)/crftest_all.testbin
+
 ##############################
 # Derive compiler warning dump locations
 ##############################
@@ -152,8 +175,10 @@ TOOL_WARNS := $(addprefix $(BUILD_DIR)/, ${TOOL_SRCS:.cpp=.o.$(WARNS_EXT)})
 EXAMPLE_WARNS := $(addprefix $(BUILD_DIR)/, ${EXAMPLE_SRCS:.cpp=.o.$(WARNS_EXT)})
 TEST_WARNS := $(addprefix $(BUILD_DIR)/, ${TEST_SRCS:.cpp=.o.$(WARNS_EXT)})
 TEST_CU_WARNS := $(addprefix $(BUILD_DIR)/cuda/, ${TEST_CU_SRCS:.cu=.o.$(WARNS_EXT)})
-ALL_CXX_WARNS := $(CXX_WARNS) $(TOOL_WARNS) $(EXAMPLE_WARNS) $(TEST_WARNS)
-ALL_CU_WARNS := $(CU_WARNS) $(TEST_CU_WARNS)
+CRFTEST_WARNS := $(addprefix $(BUILD_DIR)/, ${CRFTEST_SRCS:.cpp=.o.$(WARNS_EXT)})
+CRFTEST_CU_WARNS := $(addprefix $(BUILD_DIR)/cuda/, ${CRFTEST_CU_SRCS:.cu=.o.$(WARNS_EXT)})
+ALL_CXX_WARNS := $(CXX_WARNS) $(TOOL_WARNS) $(EXAMPLE_WARNS) $(TEST_WARNS) $(CRFTEST_WARNS)
+ALL_CU_WARNS := $(CU_WARNS) $(TEST_CU_WARNS) $(CRFTEST_CU_WARNS)
 ALL_WARNS := $(ALL_CXX_WARNS) $(ALL_CU_WARNS)
 
 EMPTY_WARN_REPORT := $(BUILD_DIR)/.$(WARNS_EXT)
@@ -215,7 +240,7 @@ endif
 
 ALL_BUILD_DIRS := $(sort $(BUILD_DIR) $(addprefix $(BUILD_DIR)/, $(SRC_DIRS)) \
 	$(addprefix $(BUILD_DIR)/cuda/, $(SRC_DIRS)) \
-	$(LIB_BUILD_DIR) $(TEST_BIN_DIR) $(PY_PROTO_BUILD_DIR) $(LINT_OUTPUT_DIR) \
+	$(LIB_BUILD_DIR) $(TEST_BIN_DIR) $(CRFTEST_BIN_DIR) $(PY_PROTO_BUILD_DIR) $(LINT_OUTPUT_DIR) \
 	$(DISTRIBUTE_SUBDIRS) $(PROTO_BUILD_INCLUDE_DIR))
 
 ##############################
@@ -346,9 +371,12 @@ endif
 ifeq ($(CPU_ONLY), 1)
 	OBJS := $(PROTO_OBJS) $(CXX_OBJS)
 	TEST_OBJS := $(TEST_CXX_OBJS)
+	CRFTEST_OBJS := $(CRFTEST_CXX_OBJS)
 	TEST_BINS := $(TEST_CXX_BINS)
+	CRFTEST_BINS := $(CRFTEST_CXX_BINS)
 	ALL_WARNS := $(ALL_CXX_WARNS)
 	TEST_FILTER := --gtest_filter="-*GPU*"
+	CRFTEST_FILTER := --gtest_filter="-*GPU*"
 	COMMON_FLAGS += -DCPU_ONLY
 endif
 
@@ -430,7 +458,7 @@ PYTHON_LDFLAGS := $(LDFLAGS) $(foreach library,$(PYTHON_LIBRARIES),-l$(library))
 SUPERCLEAN_EXTS := .so .a .o .bin .testbin .pb.cc .pb.h _pb2.py .cuo
 
 # Set the sub-targets of the 'everything' target.
-EVERYTHING_TARGETS := all py$(PROJECT) test warn lint
+EVERYTHING_TARGETS := all py$(PROJECT) test crftest warn lint
 # Only build matcaffe as part of "everything" if MATLAB_DIR is specified.
 ifneq ($(MATLAB_DIR),)
 	EVERYTHING_TARGETS += mat$(PROJECT)
@@ -439,8 +467,8 @@ endif
 ##############################
 # Define build targets
 ##############################
-.PHONY: all lib test clean docs linecount lint lintclean tools examples $(DIST_ALIASES) \
-	py mat py$(PROJECT) mat$(PROJECT) proto runtest \
+.PHONY: all lib test crftest clean docs linecount lint lintclean tools examples $(DIST_ALIASES) \
+	py mat py$(PROJECT) mat$(PROJECT) proto runtest runcrftest \
 	superclean supercleanlist supercleanfiles warn everything
 
 all: lib tools examples
@@ -486,6 +514,8 @@ $(LINT_OUTPUTS): $(LINT_OUTPUT_DIR)/%.lint.txt : % $(LINT_SCRIPT) | $(LINT_OUTPU
 
 test: $(TEST_ALL_BIN) $(TEST_ALL_DYNLINK_BIN) $(TEST_BINS)
 
+crftest: $(CRFTEST_ALL_BIN) $(CRFTEST_ALL_DYNLINK_BIN) $(CRFTEST_BINS)
+
 tools: $(TOOL_BINS) $(TOOL_BIN_LINKS)
 
 examples: $(EXAMPLE_BINS)
@@ -522,6 +552,10 @@ $(MAT$(PROJECT)_SO): $(MAT$(PROJECT)_SRC) $(STATIC_NAME)
 runtest: $(TEST_ALL_BIN)
 	$(TOOL_BUILD_DIR)/caffe
 	$(TEST_ALL_BIN) $(TEST_GPUID) --gtest_shuffle $(TEST_FILTER)
+
+runcrftest: $(CRFTEST_ALL_BIN)
+	$(TOOL_BUILD_DIR)/caffe
+	$(CRFTEST_ALL_BIN) $(CRFTEST_GPUID) --gtest_shuffle $(CRFTEST_FILTER)
 
 pytest: py
 	cd python; python -m unittest discover -s caffe/test
@@ -595,16 +629,34 @@ $(TEST_ALL_BIN): $(TEST_MAIN_SRC) $(TEST_OBJS) $(GTEST_OBJ) \
 	$(Q)$(CXX) $(TEST_MAIN_SRC) $(TEST_OBJS) $(GTEST_OBJ) \
 		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
 
+$(CRFTEST_ALL_BIN): $(CRFTEST_MAIN_SRC) $(CRFTEST_OBJS) $(GTEST_OBJ) \
+		| $(DYNAMIC_NAME) $(CRFTEST_BIN_DIR)
+	@ echo CXX/LD -o $@ $<
+	$(Q)$(CXX) $(CRFTEST_MAIN_SRC) $(CRFTEST_OBJS) $(GTEST_OBJ) \
+		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
+
 $(TEST_CU_BINS): $(TEST_BIN_DIR)/%.testbin: $(TEST_CU_BUILD_DIR)/%.o \
 	$(GTEST_OBJ) | $(DYNAMIC_NAME) $(TEST_BIN_DIR)
 	@ echo LD $<
 	$(Q)$(CXX) $(TEST_MAIN_SRC) $< $(GTEST_OBJ) \
 		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
 
+$(CRFTEST_CU_BINS): $(CRFTEST_BIN_DIR)/%.testbin: $(CRFTEST_CU_BUILD_DIR)/%.o \
+	$(GTEST_OBJ) | $(DYNAMIC_NAME) $(CRFTEST_BIN_DIR)
+	@ echo LD $<
+	$(Q)$(CXX) $(CRFTEST_MAIN_SRC) $< $(GTEST_OBJ) \
+		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
+
 $(TEST_CXX_BINS): $(TEST_BIN_DIR)/%.testbin: $(TEST_CXX_BUILD_DIR)/%.o \
 	$(GTEST_OBJ) | $(DYNAMIC_NAME) $(TEST_BIN_DIR)
 	@ echo LD $<
 	$(Q)$(CXX) $(TEST_MAIN_SRC) $< $(GTEST_OBJ) \
+		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
+
+$(CRFTEST_CXX_BINS): $(CRFTEST_BIN_DIR)/%.testbin: $(CRFTEST_CXX_BUILD_DIR)/%.o \
+	$(GTEST_OBJ) | $(DYNAMIC_NAME) $(CRFTEST_BIN_DIR)
+	@ echo LD $<
+	$(Q)$(CXX) $(CRFTEST_MAIN_SRC) $< $(GTEST_OBJ) \
 		-o $@ $(LINKFLAGS) $(LDFLAGS) -l$(LIBRARY_NAME) -Wl,-rpath,$(ORIGIN)/../lib
 
 # Target for extension-less symlinks to tool binaries with extension '*.bin'.

@@ -26,7 +26,8 @@ set_target_properties(caffe PROPERTIES
     )
 
 # ---[ Tests
- add_subdirectory(test)
+add_subdirectory(test)
+add_subdirectory(test_crf)
 
 # ---[ Install
 install(DIRECTORY ${Caffe_INCLUDE_DIR}/caffe DESTINATION include)

@@ -3,7 +3,7 @@
 
 #include "caffe/layers/eltwise_layer.hpp"
 #include "caffe/util/math_functions.hpp"
-
+#include <iostream>
 namespace caffe {
 
 template <typename Dtype>
@@ -31,7 +31,9 @@ template <typename Dtype>
 void EltwiseLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   for (int i = 1; i < bottom.size(); ++i) {
-    CHECK(bottom[i]->shape() == bottom[0]->shape());
+    CHECK(bottom[i]->shape() == bottom[0]->shape())<<" i shape"<<
+      bottom[i]->shape()[0]<<" "<<bottom[i]->shape()[1]<<" "<<bottom[i]->shape()[2]<<" "<<bottom[i]->shape()[3]<<" 0 shape"<<
+      bottom[0]->shape()[0]<<" "<<bottom[0]->shape()[1]<<" "<<bottom[0]->shape()[2]<<" "<<bottom[0]->shape()[3];
   }
   top[0]->ReshapeLike(*bottom[0]);
   // If max operation, we will initialize the vector index part.
